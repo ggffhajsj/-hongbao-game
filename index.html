@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>接力地雷红包房</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system}
+body{background:#f5f5f7;padding:16px;max-width:600px;margin:0 auto}
+.red-card{background:linear-gradient(145deg,#e62c2c,#b81818);border-radius:24px;padding:32px 20px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,0.26);margin-bottom:20px}
+.gold-circle{width:72px;height:72px;border-radius:50%;background:#ffd666;margin:20px auto;display:grid;place-items:center;color:#9b2222;font-size:28px;font-weight:bold;box-shadow:0 0 18px rgba(255,221,119,0.5);transition:0.2s;cursor:pointer}
+.gold-circle.locked{opacity:0.4;cursor:not-allowed;filter:grayscale(0.6)}
+.info-line{margin:8px 0;font-size:16px;opacity:0.92}
+.panel{background:#fff;border-radius:18px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)}
+.panel-head{padding:16px;display:flex;justify-content:space-between;align-items:center}
+.panel-body{padding:0 16px 16px;display:none}
+.panel.open .panel-body{display:block}
+input{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;margin:8px 0;font-size:16px}
+button{width:100%;padding:13px;border:none;border-radius:12px;font-size:16px;font-weight:bold;margin:8px 0}
+button.red{background:#d92626;color:#fff}
+button.blue{background:#2563eb;color:#fff}
+button:disabled{opacity:0.55}
+.tip{padding:12px;border-radius:12px;background:#fff1f1;color:#b91c1c;margin:10px 0;text-align:center;font-weight:bold}
+.chat-box{height:220px;overflow-y:auto;background:#f8f8f8;border-radius:12px;padding:10px;margin:8px 0}
+.msg-item{padding:6px 0;border-bottom:1px solid #eee;font-size:14px}
+.lock-tip{color:#fff8dc;text-align:center;padding:8px;margin-top:8px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="tip" id="relayTip"></div>
+<div class="red-card">
+  <div class="gold-circle" id="openBtn">开</div>
+  <div style="font-size:22px;margin-bottom:8px">红包</div>
+  <div>等待开启红包</div>
+  <div class="info-line">已参与 <span id="takeCnt">0</span> / <span id="totalCnt">0</span> 人</div>
+  <div class="info-line">奖池：<span id="pool">0.00</span> 积分</div>
+  <div class="lock-tip" id="lockTip"></div>
+</div>
+<div class="panel" id="adminPanel">
+  <div class="panel-head" onclick="togglePanel('adminPanel')">房主管理 <span>展开</span></div>
+  <div class="panel-body">
+    <input id="addUid" placeholder="添加白名单 ID">
+    <button class="blue" onclick="addWhitelist()">添加 ID</button>
+    <input id="chargeUid" placeholder="充值目标 ID">
+    <input id="chargeAmt" placeholder="充值数量">
+    <button class="blue" onclick="charge()">充值</button>
+  </div>
+</div>
+<div class="panel" id="accountPanel">
+  <div class="panel-head" onclick="togglePanel('accountPanel')">切换账户 <span>展开</span></div>
+  <div class="panel-body">
+    <input id="loginUid" placeholder="输入分配给你的 ID">
+    <button class="red" onclick="login()">登录</button>
+    <div id="userInfo"></div>
+  </div>
+</div>
+<div class="panel" id="transferPanel">
+  <div class="panel-head" onclick="togglePanel('transferPanel')">积分转账 <span>展开</span></div>
+  <div class="panel-body">
+    <input id="toUid" placeholder="对方 ID">
+    <input id="transAmt" placeholder="转账积分">
+    <button class="blue" onclick="transfer()">转账</button>
+  </div>
+</div>
+<div class="panel" id="sendRedPanel">
+  <div class="panel-head" onclick="togglePanel('sendRedPanel')">发接力地雷红包 <span>展开</span></div>
+  <div class="panel-body">
+    <input id="redCnt" placeholder="红包份数">
+    <button class="red" onclick="sendRelayRed()">发出 25 积分红包</button>
+  </div>
+</div>
+<div class="panel" id="chatPanel">
+  <div class="panel-head" onclick="togglePanel('chatPanel')">公屏聊天 <span>展开</span></div>
+  <div class="panel-body">
+    <div class="chat-box" id="chatBox"></div>
+    <input id="chatInput" placeholder="输入消息" disabled>
+    <button class="blue" onclick="sendChat()">发送消息</button>
+  </div>
+</div>
+<script>
+const supabaseUrl = "https://oglbmzrzxxjggromynob.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nbGJtemJ6eHhqZ2dyb215bm9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY0MTM5MDAsImV4cCI6MjA1MTk4OTkwMH0.7z1c5XjXo7L37sJnLx89rGv02w0R4z8lGx87n9v5s0";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+let uid = null;
+let userBalance = 0;
+const openBtn = document.getElementById("openBtn");
+const lockTip = document.getElementById("lockTip");
+function togglePanel(id){
+  document.getElementById(id).classList.toggle("open");
+}
+async function login(){
+  const v = document.getElementById("loginUid").value.trim();
+  if(!v){ alert("请输入 ID"); return; }
+  const {error} = await supabase.rpc("admin_add_uid", {p_uid: v});
+  if(error){ alert("登录报错：" + error.message); return; }
+  uid = v;
+  await refreshUser();
+  document.getElementById("chatInput").disabled = false;
+  alert("✅ 登录成功！ID：" + uid);
+}
+async function refreshUser(){
+  if(!uid) return;
+  const {data, error} = await supabase.from("player").select("balance").eq("uid", uid).single();
+  if(error){
+    userBalance = 0;
+  }else{
+    userBalance = Number(data?.balance ?? 0);
+  }
+  document.getElementById("userInfo").innerText = `账号：${uid}｜积分：${userBalance.toFixed(2)}`;
+  updateOpenBtnState();
+}
+function updateOpenBtnState(){
+  if(!uid){
+    openBtn.classList.add("locked");
+    lockTip.innerText = "👀 请先登录账号";
+    return;
+  }
+  if(userBalance < 30){
+    openBtn.classList.add("locked");
+    lockTip.innerText = "⚠️ 积分不足 30，不能抢红包";
+    return;
+  }
+  openBtn.classList.remove("locked");
+  lockTip.innerText = "✅ 可以抢红包";
+}
+async function addWhitelist(){
+  const u = document.getElementById("addUid").value.trim();
+  if(!u) return;
+  const {error} = await supabase.rpc("admin_add_uid", {p_uid: u});
+  if(error) alert(error.message);
+  else alert("添加成功");
+}
+async function charge(){
+  const u = document.getElementById("chargeUid").value.trim();
+  const a = Number(document.getElementById("chargeAmt").value);
+  if(!u || !a) return;
+  const {error} = await supabase.rpc("admin_charge", {p_uid: u, amt: a});
+  if(error) alert(error.message);
+  else { alert("充值成功"); await refreshUser(); }
+}
+async function transfer(){
+  const to = document.getElementById("toUid").value.trim();
+  const amt = Number(document.getElementById("transAmt").value);
+  if(!to || !amt) return;
+  const {data, error} = await supabase.rpc("transfer_point", {from_uid: uid, to_uid: to, amt: amt});
+  if(error) alert(error.message);
+  else if(!data) alert("转账失败，积分不够");
+  else { alert("转账成功"); await refreshUser(); }
+}
+async function sendRelayRed(){
+  if(!uid) { alert("请先登录"); return; }
+  const cnt = Number(document.getElementById("redCnt").value);
+  if(!cnt || cnt <=0) { alert("填写份数"); return; }
+  const {data, error} = await supabase.rpc("create_relay_red", {owner: uid, cnt: cnt});
+  if(error) alert(error.message);
+  else if(!data) alert("发包失败，需要至少 25 积分");
+  else alert("🧧 红包发出！所有人都能看到");
+  await refreshUser();
+}
+openBtn.onclick = async ()=>{
+  if(!uid || userBalance < 30){
+    alert("条件不满足，无法抢红包");
+    return;
+  }
+  const {data, error} = await supabase.rpc("grab_red", {grabber: uid});
+  if(error){
+    alert("抢包报错：" + error.message);
+    return;
+  }
+  if(data.err){
+    alert(data.err);
+    return;
+  }
+  if(data.mine){
+    alert(`💥 踩到地雷！抢到：${data.got}，扣 30，现在轮到你发包！`);
+  }else{
+    alert(`🎉 抢到：${data.got}`);
+  }
+  await refreshUser();
+}
+async function sendChat(){
+  if(!uid) return;
+  const c = document.getElementById("chatInput").value.trim();
+  if(!c) return;
+  const {error} = await supabase.rpc("send_msg", {sender: uid, content: c});
+  if(error) alert(error.message);
+  document.getElementById("chatInput").value = "";
+}
+async function renderPacket(){
+  const {data, error} = await supabase.from("red_packets").select("*").order("id", {desc:true}).limit(1).single();
+  if(error || !data){
+    document.getElementById("takeCnt").innerText = "0";
+    document.getElementById("totalCnt").innerText = "0";
+    document.getElementById("pool").innerText = "0.00";
+    return;
+  }
+  document.getElementById("takeCnt").innerText = data.total_count - data.left_count;
+  document.getElementById("totalCnt").innerText = data.total_count;
+  document.getElementById("pool").innerText = data.prize_pool;
+  updateOpenBtnState();
+}
+async function renderRelay(){
+  const {data} = await supabase.from("relay_state").select("*").limit(1).single();
+  if(data?.current_uid){
+    document.getElementById("relayTip").innerText = `🔥 当前接力人：${data.current_uid}，请发红包！`;
+  }else{
+    document.getElementById("relayTip").innerText = "⏳ 等待有人发起红包";
+  }
+}
+async function renderChat(){
+  const {data} = await supabase.from("msg").select("*").order("created_at", true).limit(100);
+  const box = document.getElementById("chatBox");
+  box.innerHTML = "";
+  if(!data) return;
+  data.forEach(m=>{
+    const div = document.createElement("div");
+    div.className = "msg-item";
+    div.innerText = `【${m.sender_uid}】${m.content}`;
+    box.appendChild(div);
+  })
+  box.scrollTop = box.scrollHeight;
+}
+supabase.channel("red-packet")
+.on("postgres_changes", {event:"*", schema:"public", table:"red_packets"}, async ()=>{ await renderPacket(); await renderRelay(); })
+.subscribe();
+supabase.channel("relay-channel")
+.on("postgres_changes", {event:"*", schema:"public", table:"relay_state"}, renderRelay)
+.subscribe();
+supabase.channel("chat-channel")
+.on("postgres_changes", {event:"INSERT", schema:"public", table:"msg"}, renderChat)
+.subscribe();
+supabase.channel("player-channel")
+.on("postgres_changes", {event:"*", schema:"public", table:"player"}, refreshUser)
+.subscribe();
+renderPacket(); renderRelay(); renderChat();
+</script>
+</body>
+</html>
