@@ -5,302 +5,610 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>接力地雷红包房</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system}
-body{background:#f5f5f7;padding:16px;max-width:600px;margin:0 auto}
-.red-card{background:linear-gradient(145deg,#e62c2c,#b81818);border-radius:24px;padding:32px 20px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,0.26);margin-bottom:20px}
-.gold-circle{width:72px;height:72px;border-radius:50%;background:#ffd666;margin:20px auto;display:grid;place-items:center;color:#9b2222;font-size:28px;font-weight:bold;box-shadow:0 0 18px rgba(255,221,119,0.5);transition:0.2s;cursor:pointer;touch-action:manipulation}
-.gold-circle.locked{opacity:0.4;cursor:not-allowed;filter:grayscale(0.6)}
-.info-line{margin:8px 0;font-size:16px;opacity:0.92}
-.panel{background:#fff;border-radius:18px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)}
-.panel-head{padding:16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;touch-action:manipulation}
-.panel-body{padding:0 16px 16px;display:none}
-.panel.open .panel-body{display:block}
-input{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;margin:8px 0;font-size:16px}
-button{width:100%;padding:13px;border:none;border-radius:12px;font-size:16px;font-weight:bold;margin:8px 0;touch-action:manipulation}
-button.red{background:#d92626;color:#fff}
-button.blue{background:#2563eb;color:#fff}
-button:disabled{opacity:0.55}
-.tip{padding:12px;border-radius:12px;background:#fff1f1;color:#b91c1c;margin:10px 0;text-align:center;font-weight:bold}
-.chat-box{height:220px;overflow-y:auto;background:#f8f8f8;border-radius:12px;padding:10px;margin:8px 0}
-.msg-item{padding:6px 0;border-bottom:1px solid #eee;font-size:14px}
-.lock-tip{color:#fff8dc;text-align:center;padding:8px;margin-top:8px;font-size:14px}
-.warn-box{background:#ffe9e9;color:#c00;padding:12px;border-radius:12px;text-align:center;margin-bottom:12px;display:none}
+*{
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body{
+  background-color: #f4f5f7;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 顶部常驻账号积分栏 */
+.top-info-bar{
+  background: linear-gradient(135deg, #2b3445, #1c2433);
+  color: #ffffff;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+.top-info-bar .row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.top-info-bar .uid-text{
+  font-size: 15px;
+  opacity: 0.9;
+}
+.top-info-bar .balance-text{
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffd166;
+}
+.not-login-tip{
+  color: #ff8a8a;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* 消息流区域 */
+.chat-wrap{
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.msg-stream{
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.msg-stream::-webkit-scrollbar{ width: 5px; }
+.msg-stream::-webkit-scrollbar-thumb{
+  background: #c8ccd4;
+  border-radius: 4px;
+}
+
+.msg-bubble{
+  max-width: 92%;
+  margin-bottom: 16px;
+}
+.msg-text{
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 13px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.msg-sys{
+  text-align: center;
+  font-size: 14px;
+  color: #646e7c;
+  padding: 6px 10px;
+}
+
+/* 大气红包卡片 */
+.redpack-card{
+  background: linear-gradient(135deg, #e03131, #a61212);
+  color: #fff;
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 8px 24px rgba(190, 20, 20, 0.32);
+}
+.redpack-title{
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.redpack-desc{
+  font-size: 15px;
+  opacity: 0.92;
+  line-height: 1.6;
+}
+.redpack-btn{
+  margin-top: 20px;
+  width: 100%;
+  border: none;
+  background: #fff;
+  color: #c02020;
+  padding: 15px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: bold;
+  transition: 0.2s;
+}
+.redpack-btn:disabled{
+  opacity: 0.45;
+  color: #777;
+}
+.redpack-btn:active:not(:disabled){
+  transform: scale(0.97);
+}
+
+/* 地雷弹窗 */
+.mine-input-wrap{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.62);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 16px;
+}
+.mine-box{
+  background: #fff;
+  border-radius: 24px;
+  padding: 30px 24px;
+  width: 100%;
+  max-width: 370px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+}
+.mine-box h3{
+  color: #d62828;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.mine-box p{
+  color: #555;
+  margin-bottom: 12px;
+}
+.mine-timer{
+  font-size: 28px;
+  font-weight: bold;
+  color: #d62828;
+  margin: 14px 0;
+}
+
+/* 底部折叠面板区域 */
+.panel-area{
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  padding: 12px 14px;
+}
+.panel{
+  border: 1px solid #e9ecef;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.panel-head{
+  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  color: #2c3e50;
+  background: #f8f9fa;
+}
+.panel-body{
+  padding: 0 18px 18px;
+  display: none;
+}
+.panel.open .panel-body{
+  display: block;
+}
+
+input{
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #d8dbe2;
+  border-radius: 14px;
+  margin: 10px 0;
+  font-size: 16px;
+  background: #fcfcfd;
+}
+button{
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 10px 0;
+  transition: 0.2s;
+}
+button.blue{
+  background: #2563eb;
+  color: white;
+}
+button.red{
+  background: #d62828;
+  color: white;
+}
+button.gray{
+  background: #868e96;
+  color: white;
+}
+button:active:not(:disabled){
+  transform: scale(0.98);
+}
+button:disabled{
+  opacity: 0.48;
+}
+
+.countdown-text{
+  color: #2563eb;
+  font-weight: 600;
+  margin: 10px 0;
+}
+.chat-input-row{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+#chatInput{
+  flex: 1;
+  margin: 0;
+}
+#btnChat{
+  width: auto;
+  white-space: nowrap;
+  margin: 0;
+}
+.chat-limit-tip{
+  font-size: 13px;
+  color: #718096;
+  margin-top: 6px;
+}
+.loading-tip{
+  color: #2563eb;
+  font-size: 14px;
+  text-align: center;
+  padding: 8px;
+}
 </style>
 </head>
 <body>
-<div class="warn-box" id="cdnWarn">⚠️网络异常：数据库脚本加载失败，请切换流量/关闭省流量，使用无痕模式打开</div>
-<div class="tip" id="relayTip"></div>
-<div class="red-card">
-  <div class="gold-circle" id="openBtn">开</div>
-  <div style="font-size:22px;margin-bottom:8px">红包</div>
-  <div>等待开启红包</div>
-  <div class="info-line">已参与 <span id="takeCnt">0</span> / <span id="totalCnt">0</span> 人</div>
-  <div class="info-line">奖池：<span id="pool">0.00</span> 积分</div>
-  <div class="lock-tip" id="lockTip"></div>
-</div>
-<div class="panel" id="adminPanel">
-  <div class="panel-head">房主管理 <span>展开</span></div>
-  <div class="panel-body">
-    <input id="addUid" placeholder="添加白名单 ID">
-    <button class="blue" id="btnAddWhite">添加 ID</button>
-    <input id="chargeUid" placeholder="充值目标 ID">
-    <input id="chargeAmt" placeholder="充值数量">
-    <button class="blue" id="btnCharge">充值</button>
+
+<!-- 顶部常驻：账号 + 积分 -->
+<div class="top-info-bar">
+  <div class="row">
+    <div>
+      <div class="uid-text">账号：<span id="showUid">未登录</span></div>
+      <div class="not-login-tip" id="loginHint">请先登录你的 ID</div>
+    </div>
+    <div class="balance-text">积分：<span id="showBalance">0</span></div>
   </div>
 </div>
-<div class="panel" id="accountPanel">
-  <div class="panel-head">切换账户 <span>展开</span></div>
-  <div class="panel-body">
-    <input id="loginUid" placeholder="输入分配给你的 ID">
-    <button class="red" id="btnLogin">登录</button>
-    <div id="userInfo"></div>
+
+<div class="chat-wrap">
+  <div class="msg-stream" id="msgStream"></div>
+</div>
+
+<div class="panel-area">
+  <!-- 登录面板 -->
+  <div class="panel" id="loginPanel">
+    <div class="panel-head">账号登录 <span>展开</span></div>
+    <div class="panel-body">
+      <input id="playerIdInput" placeholder="输入你的账号 ID">
+      <button class="blue" id="btnLogin">登录账号</button>
+    </div>
+  </div>
+
+  <!-- 房主管理面板 -->
+  <div class="panel" id="adminPanel">
+    <div class="panel-head">房主管理 <span>展开</span></div>
+    <div class="panel-body">
+      <input id="adminPwdInput" placeholder="输入房主验证密码">
+      <button class="blue" id="btnVerifyAdmin">验证解锁房主权限</button>
+      <div class="countdown-text" id="adminCountdown"></div>
+
+      <input id="addUid" placeholder="添加白名单 ID">
+      <button class="blue" id="btnAddWhite" disabled>添加 ID</button>
+
+      <input id="chargeUid" placeholder="充值目标 ID">
+      <input id="chargeAmt" placeholder="充值积分数量">
+      <button class="blue" id="btnCharge" disabled>充值</button>
+
+      <input id="redCnt" placeholder="红包份数（房主专用）">
+      <button class="red" id="btnSendRed" disabled>手动发出接力红包</button>
+    </div>
+  </div>
+
+  <!-- 公屏聊天 -->
+  <div class="panel" id="chatSendPanel">
+    <div class="panel-head">公屏聊天 <span>展开</span></div>
+    <div class="panel-body">
+      <div class="chat-input-row">
+        <input id="chatInput" placeholder="输入聊天消息">
+        <button class="blue" id="btnChat">发送</button>
+      </div>
+      <div class="chat-limit-tip">每人每 60 秒仅可发送一条消息</div>
+    </div>
+  </div>
+
+  <!-- 客服面板 -->
+  <div class="panel" id="supportPanel">
+    <div class="panel-head">积分客服 <span>展开</span></div>
+    <div class="panel-body">
+      <button class="blue" id="btnOpenTawk">打开在线客服</button>
+    </div>
   </div>
 </div>
-<div class="panel" id="transferPanel">
-  <div class="panel-head">积分转账 <span>展开</span></div>
-  <div class="panel-body">
-    <input id="toUid" placeholder="对方 ID">
-    <input id="transAmt" placeholder="转账积分">
-    <button class="blue" id="btnTrans">转账</button>
+
+<!-- 地雷弹窗 -->
+<div class="mine-input-wrap" id="mineModal">
+  <div class="mine-box">
+    <h3>💥 踩到地雷！</h3>
+    <p>请输入地雷编号，超时系统自动提交</p>
+    <div class="mine-timer" id="mineTimer">20</div>
+    <input id="mineNoInput" placeholder="地雷编号">
+    <button class="red" id="btnSubmitMine">确认提交</button>
   </div>
 </div>
-<div class="panel" id="sendRedPanel">
-  <div class="panel-head">发接力地雷红包 <span>展开</span></div>
-  <div class="panel-body">
-    <input id="redCnt" placeholder="红包份数">
-    <button class="red" id="btnSendRed">发出 25 积分红包</button>
-  </div>
-</div>
-<div class="panel" id="chatPanel">
-  <div class="panel-head">公屏聊天 <span>展开</span></div>
-  <div class="panel-body">
-    <div class="chat-box" id="chatBox"></div>
-    <input id="chatInput" placeholder="输入消息" disabled>
-    <button class="blue" id="btnChat">发送消息</button>
-  </div>
-</div>
+
+<!-- Tawk 悬浮挂件 -->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/e48247be7c49dc1fae01886789baa62915b5b126/default';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
 
 <script>
-document.addEventListener('DOMContentLoaded', async function(){
-    const cdnWarn = document.getElementById('cdnWarn');
-    // 检测supabase是否加载成功
-    if(typeof supabase === 'undefined'){
-        cdnWarn.style.display='block';
-        return;
+document.addEventListener('DOMContentLoaded', async ()=>{
+  const supabaseUrl = "https://oglbmzrzxxjggromynob.supabase.co";
+  const supabaseKey = "sb_publishable_dyIx-GTUbQtReMGJXDq6dA_hVyQ8v8h";
+  const { createClient } = supabase;
+  const sb = createClient(supabaseUrl, supabaseKey);
+
+  let uid = null;
+  let balance = 0;
+  let adminVerifiedAt = null;
+  const ADMIN_UID = "16888";
+  const ADMIN_VALID_MS = 10 * 60 * 1000;
+  const CHAT_COOLDOWN = 60 * 1000;
+  const chatLastSend = new Map();
+  let mineCountdownTimer = null;
+
+  const msgStream = document.getElementById("msgStream");
+  const showUid = document.getElementById("showUid");
+  const showBalance = document.getElementById("showBalance");
+  const loginHint = document.getElementById("loginHint");
+  const btnAddWhite = document.getElementById("btnAddWhite");
+  const btnCharge = document.getElementById("btnCharge");
+  const btnSendRed = document.getElementById("btnSendRed");
+  const adminCountdown = document.getElementById("adminCountdown");
+  const mineModal = document.getElementById("mineModal");
+  const mineTimerEl = document.getElementById("mineTimer");
+
+  // 折叠面板
+  document.querySelectorAll('.panel-head').forEach(h=>{
+    h.onclick = ()=> h.parentElement.classList.toggle('open');
+  })
+
+  function scrollBottom(){
+    msgStream.scrollTop = msgStream.scrollHeight;
+  }
+
+  function setLoginView(){
+    if(!uid){
+      showUid.innerText = "未登录";
+      showBalance.innerText = "0";
+      loginHint.style.display = "block";
+    }else{
+      showUid.innerText = uid;
+      loginHint.style.display = "none";
     }
+  }
 
-    const supabaseUrl = "https://oglbmzrzxxjggromynob.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nbGJtemJ6eHhqZ2dyb215bm9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY0MTM5MDAsImV4cCI6MjA1MTk4OTkwMH0.7z1c5XjXo7L37sJnLx89rGv02w0R4z8lGx87n9v5s0";
-    const sb = supabase.createClient(supabaseUrl, supabaseKey);
+  function appendTextMsg(sender, text){
+    const div = document.createElement('div');
+    div.className = "msg-bubble";
+    div.innerHTML = `<div class="msg-text">【${sender}】${text}</div>`;
+    msgStream.appendChild(div);
+    scrollBottom();
+  }
+  function appendSys(text){
+    const div = document.createElement('div');
+    div.className = "msg-sys";
+    div.innerText = text;
+    msgStream.appendChild(div);
+    scrollBottom();
+  }
 
-    let uid = null;
-    let userBalance = 0;
+  function appendRedPack(payload){
+    const div = document.createElement('div');
+    div.className = "msg-bubble";
+    div.innerHTML = `
+      <div class="redpack-card">
+        <div class="redpack-title">🧧 接力地雷红包</div>
+        <div class="redpack-desc">
+          发起账号：${payload.owner_uid}<br>
+          奖池固定 25 积分，一共 5 份，必有地雷<br>
+          当前剩余可领取：${payload.left}
+        </div>
+        <button class="redpack-btn take-red" data-rid="${payload.id}" ${payload.left <= 0 ? "disabled" : ""}>
+          ${payload.left <= 0 ? "红包已经领完" : "领取红包"}
+        </button>
+      </div>
+    `;
+    msgStream.appendChild(div);
+    scrollBottom();
 
-    const openBtn = document.getElementById("openBtn");
-    const lockTip = document.getElementById("lockTip");
+    div.querySelector('.take-red').onclick = async (ev)=>{
+      if(!uid) return alert("请先登录账号！");
+      const rid = ev.target.dataset.rid;
+      const {data,error} = await sb.rpc("grab_red", {red_id: rid});
+      if(error) return alert(error.message);
 
-    // 面板展开收起
-    document.querySelectorAll(".panel-head").forEach(h=>{
-        h.addEventListener("click",()=>{
-            h.parentElement.classList.toggle("open");
-        })
-    })
-
-    async function login(){
-        try{
-            const v = document.getElementById("loginUid").value.trim();
-            if(!v){ alert("请输入 ID"); return; }
-            const {error} = await sb.rpc("admin_add_uid", {p_uid: v});
-            if(error){ alert("登录报错：" + error.message); return; }
-            uid = v;
-            await refreshUser();
-            document.getElementById("chatInput").disabled = false;
-            alert("✅ 登录成功！ID：" + uid);
-        }catch(e){alert("登录异常:"+e.message)}
+      if(data.triggerMine){
+        openMineModal();
+        appendSys(`💥 ${uid} 踩中地雷，扣除 30 积分，准备生成新红包！`);
+      }else{
+        appendSys(`✅ ${uid} 抢到红包，获得积分：${data.got}`);
+      }
+      await loadLatestRed();
+      await refreshUser();
     }
+  }
 
-    async function refreshUser(){
-        try{
-            if(!uid) return;
-            const {data, error} = await sb.from("player").select("balance").eq("uid", uid).single();
-            if(error){
-                userBalance = 0;
-            }else{
-                userBalance = Number(data?.balance ?? 0);
-            }
-            document.getElementById("userInfo").innerText = `账号：${uid}｜积分：${userBalance.toFixed(2)}`;
-            updateOpenBtnState();
-        }catch(e){console.error(e)}
+  function openMineModal(){
+    mineModal.style.display = "flex";
+    let t = 20;
+    mineTimerEl.innerText = t;
+    if(mineCountdownTimer) clearInterval(mineCountdownTimer);
+    mineCountdownTimer = setInterval(()=>{
+      t--;
+      mineTimerEl.innerText = t;
+      if(t <= 0){
+        clearInterval(mineCountdownTimer);
+        autoSubmitMine();
+      }
+    }, 1000);
+  }
+  async function autoSubmitMine(){
+    document.getElementById("mineNoInput").value = "AUTO" + Math.floor(Math.random() * 9999);
+    await submitMineNumber();
+  }
+  async function submitMineNumber(){
+    clearInterval(mineCountdownTimer);
+    mineModal.style.display = "none";
+    const mineNo = document.getElementById("mineNoInput").value.trim();
+    const {error} = await sb.rpc("mine_generate_packet", {player_uid: uid, mine_no: mineNo});
+    if(error) alert("生成红包失败：" + error.message);
+    else appendSys(`🧧 新接力红包已发出，地雷编号：${mineNo}`);
+    await loadLatestRed();
+    await refreshUser();
+  }
+  document.getElementById("btnSubmitMine").onclick = submitMineNumber;
+
+  function updateAdminButtonState(){
+    if(!adminVerifiedAt){
+      btnAddWhite.disabled = true;
+      btnCharge.disabled = true;
+      btnSendRed.disabled = true;
+      adminCountdown.innerText = "";
+      return;
     }
-
-    function updateOpenBtnState(){
-        if(!uid){
-            openBtn.classList.add("locked");
-            lockTip.innerText = "👀 请先登录账号";
-            return;
-        }
-        if(userBalance < 30){
-            openBtn.classList.add("locked");
-            lockTip.innerText = "⚠️ 积分不足 30，不能抢红包";
-            return;
-        }
-        openBtn.classList.remove("locked");
-        lockTip.innerText = "✅ 可以抢红包";
+    const elapsed = Date.now() - adminVerifiedAt;
+    if(elapsed >= ADMIN_VALID_MS){
+      adminVerifiedAt = null;
+      btnAddWhite.disabled = true;
+      btnCharge.disabled = true;
+      btnSendRed.disabled = true;
+      adminCountdown.innerText = "房主权限过期，请重新验证";
+      return;
     }
+    const remainSec = Math.floor((ADMIN_VALID_MS - elapsed)/1000);
+    const m = Math.floor(remainSec / 60);
+    const s = remainSec % 60;
+    adminCountdown.innerText = `✅ 房主权限有效，剩余 ${m} 分 ${s} 秒`;
+    btnAddWhite.disabled = false;
+    btnCharge.disabled = false;
+    btnSendRed.disabled = false;
+  }
+  setInterval(updateAdminButtonState, 1000);
 
-    async function addWhitelist(){
-        try{
-            const u = document.getElementById("addUid").value.trim();
-            if(!u) return;
-            const {error} = await sb.rpc("admin_add_uid", {p_uid: u});
-            if(error) alert(error.message);
-            else alert("添加成功");
-        }catch(e){alert(e.message)}
+  async function refreshUser(){
+    if(!uid){
+      balance = 0;
+      setLoginView();
+      return;
     }
+    const {data} = await sb.from("player").select("balance").eq("uid", uid).single();
+    balance = data?.balance ?? 0;
+    showBalance.innerText = balance;
+    setLoginView();
+  }
 
-    async function charge(){
-        try{
-            const u = document.getElementById("chargeUid").value.trim();
-            const a = Number(document.getElementById("chargeAmt").value);
-            if(!u || !a) return;
-            const {error} = await sb.rpc("admin_charge", {p_uid: u, amt: a});
-            if(error) alert(error.message);
-            else { alert("充值成功"); await refreshUser(); }
-        }catch(e){alert(e.message)}
+  // 用户登录
+  document.getElementById("btnLogin").onclick = async ()=>{
+    const inputId = document.getElementById("playerIdInput").value.trim();
+    if(!inputId) return alert("请输入账号 ID");
+    uid = inputId;
+    await sb.rpc("admin_add_uid", {p_uid: uid});
+    await refreshUser();
+    appendSys(`👤 ${uid} 进入聊天室`);
+  }
+
+  document.getElementById("btnVerifyAdmin").onclick = async ()=>{
+    if(uid !== ADMIN_UID) return alert("只有房主账号 16888 可以解锁");
+    const pwd = document.getElementById("adminPwdInput").value.trim();
+    const {data,err} = await sb.from("app_config").select("value").eq("key","admin_secret").single();
+    if(err) return alert("读取配置失败");
+    if(data.value === pwd){
+      adminVerifiedAt = Date.now();
+      updateAdminButtonState();
+      alert("✅ 房主解锁成功，有效期十分钟");
+    }else alert("❌ 密码错误");
+  }
+
+  document.getElementById("btnSendRed").onclick = async ()=>{
+    const cnt = Number(document.getElementById("redCnt").value);
+    if(!cnt || cnt <= 0) return alert("填写正确份数");
+    const {error} = await sb.rpc("admin_create_red", {total: cnt});
+    if(error) return alert(error.message);
+    appendSys(`🧧 房主手动发出接力红包！`);
+    await loadLatestRed();
+  }
+  document.getElementById("btnAddWhite").onclick = async ()=>{
+    const target = document.getElementById("addUid").value.trim();
+    if(!target) return;
+    const {error} = await sb.rpc("admin_add_uid", {p_uid: target});
+    if(error) return alert(error.message);
+    alert("添加 ID 成功");
+  }
+  document.getElementById("btnCharge").onclick = async ()=>{
+    const target = document.getElementById("chargeUid").value.trim();
+    const num = Number(document.getElementById("chargeAmt").value);
+    if(!target || !num) return;
+    const {error} = await sb.rpc("admin_charge", {p_uid: target, amt: num});
+    if(error) return alert(error.message);
+    alert("充值成功");
+  }
+
+  // 聊天发送 + 限流
+  document.getElementById("btnChat").onclick = async ()=>{
+    if(!uid) return alert("请登录账号");
+    const now = Date.now();
+    const last = chatLastSend.get(uid) ?? 0;
+    if(now - last < CHAT_COOLDOWN){
+      return alert("冷却限制：一分钟只能发送一条消息");
     }
+    const content = document.getElementById("chatInput").value.trim();
+    if(!content) return;
+    const {error} = await sb.rpc("send_chat_msg", {sender: uid, content});
+    if(error) return alert(error.message);
+    chatLastSend.set(uid, now);
+    document.getElementById("chatInput").value = "";
+  }
 
-    async function transfer(){
-        try{
-            const to = document.getElementById("toUid").value.trim();
-            const amt = Number(document.getElementById("transAmt").value);
-            if(!to || !amt) return;
-            const {data, error} = await sb.rpc("transfer_point", {from_uid: uid, to_uid: to, amt: amt});
-            if(error) alert(error.message);
-            else if(!data) alert("转账失败，积分不够");
-            else { alert("转账成功"); await refreshUser(); }
-        }catch(e){alert(e.message)}
-    }
+  document.getElementById("btnOpenTawk").onclick = ()=>{
+    if(window.Tawk_API && Tawk_API.maximize) Tawk_API.maximize();
+  }
 
-    async function sendRelayRed(){
-        try{
-            if(!uid) { alert("请先登录"); return; }
-            const cnt = Number(document.getElementById("redCnt").value);
-            if(!cnt || cnt <=0) { alert("填写份数"); return; }
-            const {data, error} = await sb.rpc("create_relay_red", {owner: uid, cnt: cnt});
-            if(error) alert(error.message);
-            else if(!data) alert("发包失败，需要至少 25 积分");
-            else alert("🧧 红包发出！所有人都能看到");
-            await refreshUser();
-        }catch(e){alert(e.message)}
-    }
+  async function loadLatestRed(){
+    const {data} = await sb.from("red_pack").select("id,owner_uid,left").order("created_at", {asc:true});
+    msgStream.querySelectorAll('.redpack-card').forEach(el=>el.parentElement.remove());
+    if(data) data.forEach(r=>appendRedPack(r));
+  }
 
-    openBtn.addEventListener("click",async ()=>{
-        try{
-            if(!uid || userBalance < 30){
-                alert("条件不满足，无法抢红包");
-                return;
-            }
-            const {data, error} = await sb.rpc("grab_red", {grabber: uid});
-            if(error){
-                alert("抢包报错：" + error.message);
-                return;
-            }
-            if(data.err){
-                alert(data.err);
-                return;
-            }
-            if(data.mine){
-                alert(`💥 踩到地雷！抢到：${data.got}，扣 30，现在轮到你发包！`);
-            }else{
-                alert(`🎉 抢到：${data.got}`);
-            }
-            await refreshUser();
-        }catch(e){alert("抢包异常:"+e.message)}
-    })
+  // 实时订阅：红包、聊天、本人积分变动
+  sb.channel("red-live")
+  .on("postgres_changes", {event:"INSERT", schema:"public", table:"red_pack"}, p=> appendRedPack(p.new))
+  .subscribe();
 
-    async function sendChat(){
-        try{
-            if(!uid) return;
-            const c = document.getElementById("chatInput").value.trim();
-            if(!c) return;
-            const {error} = await sb.rpc("send_msg", {sender: uid, content: c});
-            if(error) alert(error.message);
-            document.getElementById("chatInput").value = "";
-        }catch(e){alert(e.message)}
-    }
+  sb.channel("chat-live")
+  .on("postgres_changes", {event:"INSERT", schema:"public", table:"chat_msg"}, p=> appendTextMsg(p.new.sender_uid, p.new.content))
+  .subscribe();
 
-    async function renderPacket(){
-        try{
-            const {data, error} = await sb.from("red_packets").select("*").order("id", {desc:true}).limit(1).single();
-            if(error || !data){
-                document.getElementById("takeCnt").innerText = "0";
-                document.getElementById("totalCnt").innerText = "0";
-                document.getElementById("pool").innerText = "0.00";
-                return;
-            }
-            document.getElementById("takeCnt").innerText = data.total_count - data.left_count;
-            document.getElementById("totalCnt").innerText = data.total_count;
-            document.getElementById("pool").innerText = data.prize_pool;
-            updateOpenBtnState();
-        }catch(e){console.error(e)}
-    }
+  sb.channel("balance-live")
+  .on("postgres_changes", {event:"UPDATE", schema:"public", table:"player", filter:`uid=eq.${uid ?? ''}`}, ()=> refreshUser())
+  .subscribe();
 
-    async function renderRelay(){
-        try{
-            const {data} = await sb.from("relay_state").select("*").limit(1).single();
-            if(data?.current_uid){
-                document.getElementById("relayTip").innerText = `🔥 当前接力人：${data.current_uid}，请发红包！`;
-            }else{
-                document.getElementById("relayTip").innerText = "⏳ 等待有人发起红包";
-            }
-        }catch(e){console.error(e)}
-    }
-
-    async function renderChat(){
-        try{
-            const {data} = await sb.from("msg").select("*").order("created_at", true).limit(100);
-            const box = document.getElementById("chatBox");
-            box.innerHTML = "";
-            if(!data) return;
-            data.forEach(m=>{
-                const div = document.createElement("div");
-                div.className = "msg-item";
-                div.innerText = `【${m.sender_uid}】${m.content}`;
-                box.appendChild(div);
-            })
-            box.scrollTop = box.scrollHeight;
-        }catch(e){console.error(e)}
-    }
-
-    //绑定按钮
-    document.getElementById("btnLogin").addEventListener("click",login);
-    document.getElementById("btnAddWhite").addEventListener("click",addWhitelist);
-    document.getElementById("btnCharge").addEventListener("click",charge);
-    document.getElementById("btnTrans").addEventListener("click",transfer);
-    document.getElementById("btnSendRed").addEventListener("click",sendRelayRed);
-    document.getElementById("btnChat").addEventListener("click",sendChat);
-
-    //实时订阅
-    sb.channel("red-packet")
-    .on("postgres_changes", {event:"*", schema:"public", table:"red_packets"}, async ()=>{ await renderPacket(); await renderRelay(); })
-    .subscribe();
-
-    sb.channel("relay-channel")
-    .on("postgres_changes", {event:"*", schema:"public", table:"relay_state"}, renderRelay)
-    .subscribe();
-
-    sb.channel("chat-channel")
-    .on("postgres_changes", {event:"INSERT", schema:"public", table:"msg"}, renderChat)
-    .subscribe();
-
-    sb.channel("player-channel")
-    .on("postgres_changes", {event:"*", schema:"public", table:"player"}, refreshUser)
-    .subscribe();
-
-    await renderPacket();
-    await renderRelay();
-    await renderChat();
+  appendSys("✅ 聊天室加载完毕，等待红包");
+  setLoginView();
+  await refreshUser();
+  await loadLatestRed();
+  updateAdminButtonState();
 })
 </script>
 </body>
